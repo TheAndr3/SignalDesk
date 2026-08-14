@@ -13,6 +13,7 @@
     "outDir": "./dist",
     "types": ["node", "jest"],
     "incremental": true,
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "skipLibCheck": true,
     "strictNullChecks": true,
     "noImplicitAny": false,
