@@ -22,14 +22,14 @@ const SEED_USERS = [
     workspace: 'Acme Corp',
   },
   {
-    email: 'dave@stark.com',
-    name: 'Dave Wilson',
+    email: 'david@stark.com',
+    name: 'David Miller',
     role: 'Agent',
     workspace: 'Stark Industries',
   },
   {
-    email: 'eve@stark.com',
-    name: 'Eve Brown',
+    email: 'eva@stark.com',
+    name: 'Eva Green',
     role: 'Agent',
     workspace: 'Stark Industries',
   },

@@ -10,6 +10,7 @@
     "start:prod": "node dist/main",
     "typecheck": "tsc --noEmit",
     "test": "jest",
+    "test:integration": "jest --config jest.integration.json --runInBand",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage"
   },
@@ -67,6 +68,9 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "/test/integration/"
+    ],
     "moduleNameMapper": {
       "^@signaldesk/shared$": "<rootDir>/../../packages/shared/src/index.ts"
     }

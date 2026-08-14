@@ -23,7 +23,8 @@ export function getAliceToken(): string {
     sub: ALICE_ID,
     email: 'alice@acme.com',
     workspace_id: WORKSPACE_A_ID,
-    role: WorkspaceMemberRole.AGENT,
+    role: 'authenticated',
+    workspace_role: WorkspaceMemberRole.AGENT,
     display_name: 'Alice Smith',
     aud: 'authenticated',
   });
@@ -34,7 +35,8 @@ export function getBobToken(): string {
     sub: BOB_ID,
     email: 'bob@acme.com',
     workspace_id: WORKSPACE_A_ID,
-    role: WorkspaceMemberRole.AGENT,
+    role: 'authenticated',
+    workspace_role: WorkspaceMemberRole.AGENT,
     display_name: 'Bob Jones',
     aud: 'authenticated',
   });
@@ -45,7 +47,8 @@ export function getCarolToken(): string {
     sub: CAROL_ID,
     email: 'carol@acme.com',
     workspace_id: WORKSPACE_A_ID,
-    role: WorkspaceMemberRole.MANAGER,
+    role: 'authenticated',
+    workspace_role: WorkspaceMemberRole.MANAGER,
     display_name: 'Carol Manager',
     aud: 'authenticated',
   });
@@ -56,7 +59,8 @@ export function getDaveToken(): string {
     sub: DAVE_ID,
     email: 'dave@stark.com',
     workspace_id: WORKSPACE_B_ID,
-    role: WorkspaceMemberRole.AGENT,
+    role: 'authenticated',
+    workspace_role: WorkspaceMemberRole.AGENT,
     display_name: 'Dave Wilson',
     aud: 'authenticated',
   });

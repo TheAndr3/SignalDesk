@@ -4,7 +4,7 @@
 
 **Blocked by:** 02 — Database schema, auth hook, and seed data
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] Test harness: direct Postgres connection using the `authenticated` role (not service-role), with `SET LOCAL request.jwt.claims` to simulate a user's JWT
 - [x] **Test 7 — Write Denial**: Using an `authenticated`-role connection with a valid Workspace A JWT, attempt `INSERT`, `UPDATE`, and `DELETE` on `cases` and `case_events`. Assert: all operations are denied with a permission error (not RLS filtering — the grants are revoked entirely at the role level)

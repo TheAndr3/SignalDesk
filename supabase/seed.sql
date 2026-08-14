@@ -7,7 +7,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA extensions;
 INSERT INTO public.workspaces (id, name, case_counter, created_at, updated_at)
 VALUES
     ('a0000000-0000-0000-0000-000000000001', 'Acme Corp', 22, now() - interval '30 days', now()),
-    ('b0000000-0000-0000-0000-000000000002', 'Stark Industries', 22, now() - interval '30 days', now())
+    ('b0000000-0000-0000-0000-000000000002', 'Stark Industries', 22, now() - interval '30 days', now()),
+    ('c0000000-0000-0000-0000-000000000003', 'Integration Test Workspace', 0, now(), now())
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
     case_counter = EXCLUDED.case_counter;
@@ -109,10 +110,89 @@ VALUES
         '{"display_name": "Frank Director"}',
         now(),
         now()
+    ),
+    -- Integration-only users. They are deliberately absent from the demo selector.
+    (
+        'c1111111-1111-1111-1111-111111111111',
+        '00000000-0000-0000-0000-000000000000',
+        'authenticated',
+        'authenticated',
+        'integration-agent-one@signaldesk.test',
+        extensions.crypt('Password123!', extensions.gen_salt('bf')),
+        now(),
+        '{"provider": "email", "providers": ["email"]}',
+        '{"display_name": "Integration Agent One"}',
+        now(),
+        now()
+    ),
+    (
+        'c2222222-2222-2222-2222-222222222222',
+        '00000000-0000-0000-0000-000000000000',
+        'authenticated',
+        'authenticated',
+        'integration-agent-two@signaldesk.test',
+        extensions.crypt('Password123!', extensions.gen_salt('bf')),
+        now(),
+        '{"provider": "email", "providers": ["email"]}',
+        '{"display_name": "Integration Agent Two"}',
+        now(),
+        now()
+    ),
+    (
+        'c3333333-3333-3333-3333-333333333333',
+        '00000000-0000-0000-0000-000000000000',
+        'authenticated',
+        'authenticated',
+        'integration-manager@signaldesk.test',
+        extensions.crypt('Password123!', extensions.gen_salt('bf')),
+        now(),
+        '{"provider": "email", "providers": ["email"]}',
+        '{"display_name": "Integration Manager"}',
+        now(),
+        now()
+    ),
+    -- This authenticated account intentionally has no Workspace membership.
+    (
+        'c9999999-9999-9999-9999-999999999999',
+        '00000000-0000-0000-0000-000000000000',
+        'authenticated',
+        'authenticated',
+        'orphan@signaldesk.test',
+        extensions.crypt('Password123!', extensions.gen_salt('bf')),
+        now(),
+        '{"provider": "email", "providers": ["email"]}',
+        '{"display_name": "Unconfigured Account"}',
+        now(),
+        now()
     )
 ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     encrypted_password = EXCLUDED.encrypted_password;
+
+-- The local GoTrue version scans these nullable auth columns into strings during
+-- password authentication. Seeded users must therefore use empty strings rather
+-- than NULL, or the token endpoint returns a 500 schema-query error.
+UPDATE auth.users
+SET
+    confirmation_token = COALESCE(confirmation_token, ''),
+    email_change = COALESCE(email_change, ''),
+    recovery_token = COALESCE(recovery_token, ''),
+    email_change_token_new = COALESCE(email_change_token_new, ''),
+    email_change_token_current = COALESCE(email_change_token_current, ''),
+    phone_change_token = COALESCE(phone_change_token, ''),
+    reauthentication_token = COALESCE(reauthentication_token, '')
+WHERE id IN (
+    'a1111111-1111-1111-1111-111111111111',
+    'a2222222-2222-2222-2222-222222222222',
+    'a3333333-3333-3333-3333-333333333333',
+    'b1111111-1111-1111-1111-111111111111',
+    'b2222222-2222-2222-2222-222222222222',
+    'b3333333-3333-3333-3333-333333333333',
+    'c1111111-1111-1111-1111-111111111111',
+    'c2222222-2222-2222-2222-222222222222',
+    'c3333333-3333-3333-3333-333333333333',
+    'c9999999-9999-9999-9999-999999999999'
+);
 
 -- ============================================================================
 -- 3. WORKSPACE MEMBERS
@@ -124,7 +204,10 @@ VALUES
     ('a3333333-3333-3333-3333-333333333333', 'a0000000-0000-0000-0000-000000000001', 'manager', 'Carol Manager', now() - interval '30 days'),
     ('b1111111-1111-1111-1111-111111111111', 'b0000000-0000-0000-0000-000000000002', 'agent', 'David Miller', now() - interval '30 days'),
     ('b2222222-2222-2222-2222-222222222222', 'b0000000-0000-0000-0000-000000000002', 'agent', 'Eva Green', now() - interval '30 days'),
-    ('b3333333-3333-3333-3333-333333333333', 'b0000000-0000-0000-0000-000000000002', 'manager', 'Frank Director', now() - interval '30 days')
+    ('b3333333-3333-3333-3333-333333333333', 'b0000000-0000-0000-0000-000000000002', 'manager', 'Frank Director', now() - interval '30 days'),
+    ('c1111111-1111-1111-1111-111111111111', 'c0000000-0000-0000-0000-000000000003', 'agent', 'Integration Agent One', now()),
+    ('c2222222-2222-2222-2222-222222222222', 'c0000000-0000-0000-0000-000000000003', 'agent', 'Integration Agent Two', now()),
+    ('c3333333-3333-3333-3333-333333333333', 'c0000000-0000-0000-0000-000000000003', 'manager', 'Integration Manager', now())
 ON CONFLICT (user_id, workspace_id) DO UPDATE SET
     role = EXCLUDED.role,
     display_name = EXCLUDED.display_name;

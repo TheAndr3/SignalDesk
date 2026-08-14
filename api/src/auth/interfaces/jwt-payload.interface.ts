@@ -6,6 +6,7 @@ export interface SupabaseJwtPayload {
   email?: string;
   role?: string;
   workspace_id?: string;
+  workspace_role?: string;
   display_name?: string;
   exp?: number;
   iat?: number;

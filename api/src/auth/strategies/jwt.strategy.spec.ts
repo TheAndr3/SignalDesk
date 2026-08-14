@@ -20,7 +20,8 @@ describe('JwtStrategy', () => {
       sub: 'a1111111-1111-1111-1111-111111111111',
       email: 'alice@acme.com',
       workspace_id: 'a0000000-0000-0000-0000-000000000001',
-      role: 'agent',
+      role: 'authenticated',
+      workspace_role: 'agent',
       display_name: 'Alice Smith',
     };
 
@@ -40,7 +41,8 @@ describe('JwtStrategy', () => {
       sub: 'a3333333-3333-3333-3333-333333333333',
       email: 'carol@acme.com',
       workspace_id: 'a0000000-0000-0000-0000-000000000001',
-      role: 'manager',
+      role: 'authenticated',
+      workspace_role: 'manager',
       display_name: 'Carol Manager',
     };
 

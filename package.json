@@ -12,6 +12,7 @@
     "dev:api": "npm run --workspace=api start:dev",
     "dev:web": "npm run --workspace=web dev",
     "typecheck": "npm run --workspace=packages/shared typecheck && npm run --workspace=api typecheck && npm run --workspace=web typecheck",
-    "test": "npm run --workspace=api test"
+    "test": "npm run --workspace=api test",
+    "test:integration": "npm run --workspace=api test:integration"
   }
 }

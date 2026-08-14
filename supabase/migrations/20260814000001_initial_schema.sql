@@ -84,7 +84,7 @@ CREATE POLICY "case_events_select_policy" ON public.case_events
     USING (workspace_id = (auth.jwt() ->> 'workspace_id')::uuid);
 
 -- 8. Custom Access Token Hook Function (Postgres function)
--- Adds workspace_id, role, and display_name as custom claims into auth.jwt()
+-- Adds workspace_id, workspace_role, and display_name as custom claims into auth.jwt()
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -111,7 +111,9 @@ BEGIN
     -- If user belongs to a workspace, inject custom claims
     IF user_workspace_id IS NOT NULL THEN
         claims := jsonb_set(claims, '{workspace_id}', to_jsonb(user_workspace_id::text));
-        claims := jsonb_set(claims, '{role}', to_jsonb(user_role));
+        -- `role` is a reserved claim that determines the Supabase database role.
+        -- Keep its `authenticated` value and store application authorization here.
+        claims := jsonb_set(claims, '{workspace_role}', to_jsonb(user_role));
         claims := jsonb_set(claims, '{display_name}', to_jsonb(user_display_name));
     END IF;
 

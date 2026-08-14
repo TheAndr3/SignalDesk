@@ -4,7 +4,7 @@
 
 **Blocked by:** 07 — Resolve with role-based authorization, 08 — SSE real-time event stream
 
-**Status:** ready-for-agent
+**Status:** complete
 
 - [x] Test harness: tests run against a real Supabase Postgres (via `supabase start`), using real JWTs for seeded users
 - [x] **Test 1 — Claim Race**: Two concurrent `POST /cases/:id/claim` requests via `Promise.all()` for the same unassigned case. Assert: exactly one 200, exactly one 409 with `CLAIM_CONFLICT` code, exactly one `claimed` event in `case_events`, `assignee_id` set to the winner
