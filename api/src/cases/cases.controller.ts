@@ -47,4 +47,13 @@ export class CasesController {
   ): Promise<CaseDto> {
     return this.casesService.findById(user.workspaceId, caseId);
   }
+
+  @Post(':id/claim')
+  @HttpCode(HttpStatus.OK)
+  async claimCase(
+    @CurrentUser() user: AuthUser,
+    @Param('id') caseId: string,
+  ): Promise<CaseDto> {
+    return this.casesService.claimCase(user.workspaceId, caseId, user.userId);
+  }
 }

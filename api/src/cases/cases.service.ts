@@ -59,4 +59,25 @@ export class CasesService {
 
     return foundCase;
   }
+
+  async claimCase(
+    workspaceId: string,
+    caseId: string,
+    claimantId: string,
+  ): Promise<CaseDto> {
+    const claimedCase = await this.casesRepository.claimCase(
+      workspaceId,
+      caseId,
+      claimantId,
+    );
+
+    // Emit event after transaction commit for SSE consumers
+    this.eventEmitter.emit('case_claimed', {
+      type: 'case_claimed',
+      caseId: claimedCase.id,
+      workspaceId,
+    });
+
+    return claimedCase;
+  }
 }

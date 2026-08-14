@@ -19,6 +19,7 @@ describe('CasesService', () => {
       createCase: jest.fn(),
       findAll: jest.fn(),
       findById: jest.fn(),
+      claimCase: jest.fn(),
     } as any;
 
     mockEventEmitter = {
@@ -131,5 +132,40 @@ describe('CasesService', () => {
       const res = httpErr.getResponse() as any;
       expect(res.error.code).toBe(ErrorCode.CASE_NOT_FOUND);
     }
+  });
+
+  it('should claim case and emit case_claimed event', async () => {
+    const mockClaimedCase = {
+      id: 'case-uuid-1234',
+      reference: 1,
+      formattedReference: 'CASE-0001',
+      title: 'Valid Case',
+      description: null,
+      priority: CasePriority.LOW,
+      status: CaseStatus.ASSIGNED,
+      workspaceId,
+      creatorId,
+      assigneeId: creatorId,
+      assigneeDisplayName: 'Alice Smith',
+      resolutionNote: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    mockRepository.claimCase.mockResolvedValue(mockClaimedCase);
+
+    const result = await service.claimCase(workspaceId, 'case-uuid-1234', creatorId);
+
+    expect(mockRepository.claimCase).toHaveBeenCalledWith(
+      workspaceId,
+      'case-uuid-1234',
+      creatorId,
+    );
+    expect(mockEventEmitter.emit).toHaveBeenCalledWith('case_claimed', {
+      type: 'case_claimed',
+      caseId: 'case-uuid-1234',
+      workspaceId,
+    });
+    expect(result).toEqual(mockClaimedCase);
   });
 });

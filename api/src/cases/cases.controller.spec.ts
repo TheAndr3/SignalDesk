@@ -64,6 +64,23 @@ describe('CasesController', () => {
               updatedAt: new Date().toISOString(),
               events: [],
             }),
+            claimCase: jest.fn().mockResolvedValue({
+              id: 'case-uuid-1234',
+              reference: 1,
+              formattedReference: 'CASE-0001',
+              title: 'API endpoint latency issue',
+              description: null,
+              priority: CasePriority.URGENT,
+              status: CaseStatus.ASSIGNED,
+              workspaceId: mockUser.workspaceId,
+              creatorId: mockUser.userId,
+              creatorDisplayName: 'Alice Smith',
+              assigneeId: mockUser.userId,
+              assigneeDisplayName: 'Alice Smith',
+              resolutionNote: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }),
           },
         },
       ],
@@ -119,5 +136,17 @@ describe('CasesController', () => {
       'case-uuid-1234',
     );
     expect(result.id).toBe('case-uuid-1234');
+  });
+
+  it('should call casesService.claimCase with user context', async () => {
+    const result = await controller.claimCase(mockUser, 'case-uuid-1234');
+
+    expect(casesService.claimCase).toHaveBeenCalledWith(
+      mockUser.workspaceId,
+      'case-uuid-1234',
+      mockUser.userId,
+    );
+    expect(result.status).toBe(CaseStatus.ASSIGNED);
+    expect(result.assigneeId).toBe(mockUser.userId);
   });
 });

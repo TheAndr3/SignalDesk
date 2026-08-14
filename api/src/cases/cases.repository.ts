@@ -122,6 +122,119 @@ export class CasesRepository {
   }
 
   /**
+   * Claims an unassigned case atomically.
+   * Atomic conditional UPDATE: WHERE id = $id AND workspace_id = $workspaceId AND status = 'open' AND assignee_id IS NULL.
+   * If another user won the race or the case is not open, returns 409 Conflict with CLAIM_CONFLICT code.
+   */
+  async claimCase(
+    workspaceId: string,
+    caseId: string,
+    claimantId: string,
+  ): Promise<CaseDto> {
+    return this.db.transaction().execute(async (trx) => {
+      // 1. Atomic conditional UPDATE
+      const updatedCase = await trx
+        .updateTable('cases')
+        .set({
+          assignee_id: claimantId,
+          status: CaseStatus.ASSIGNED,
+          updated_at: new Date().toISOString(),
+        })
+        .where('id', '=', caseId)
+        .where('workspace_id', '=', workspaceId)
+        .where('status', '=', CaseStatus.OPEN)
+        .where('assignee_id', 'is', null)
+        .returningAll()
+        .executeTakeFirst();
+
+      if (!updatedCase) {
+        // Disambiguate failure reason
+        const existingCase = await trx
+          .selectFrom('cases')
+          .select(['id', 'status', 'assignee_id'])
+          .where('id', '=', caseId)
+          .where('workspace_id', '=', workspaceId)
+          .executeTakeFirst();
+
+        if (!existingCase) {
+          throw new HttpException(
+            {
+              error: {
+                code: ErrorCode.CASE_NOT_FOUND,
+                message: 'Case not found in current workspace',
+                statusCode: HttpStatus.NOT_FOUND,
+              },
+            },
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
+        throw new HttpException(
+          {
+            error: {
+              code: ErrorCode.CLAIM_CONFLICT,
+              message:
+                existingCase.status === CaseStatus.RESOLVED
+                  ? 'Case is already resolved and cannot be claimed'
+                  : 'Case is already assigned to another user',
+              statusCode: HttpStatus.CONFLICT,
+            },
+          },
+          HttpStatus.CONFLICT,
+        );
+      }
+
+      // 2. Insert claimed event in the same transaction
+      await trx
+        .insertInto('case_events')
+        .values({
+          case_id: updatedCase.id,
+          workspace_id: workspaceId,
+          event_type: CaseEventType.CLAIMED,
+          actor_id: claimantId,
+          payload: {
+            assignee_id: claimantId,
+          },
+        })
+        .execute();
+
+      // 3. Fetch display names
+      const [creator, assignee] = await Promise.all([
+        trx
+          .selectFrom('workspace_members')
+          .select(['display_name'])
+          .where('user_id', '=', updatedCase.creator_id)
+          .where('workspace_id', '=', workspaceId)
+          .executeTakeFirst(),
+        trx
+          .selectFrom('workspace_members')
+          .select(['display_name'])
+          .where('user_id', '=', claimantId)
+          .where('workspace_id', '=', workspaceId)
+          .executeTakeFirst(),
+      ]);
+
+      return {
+        id: updatedCase.id,
+        reference: updatedCase.reference,
+        formattedReference: formatCaseReference(updatedCase.reference),
+        title: updatedCase.title,
+        description: updatedCase.description,
+        priority: updatedCase.priority as CasePriority,
+        status: updatedCase.status as CaseStatus,
+        workspaceId: updatedCase.workspace_id,
+        creatorId: updatedCase.creator_id,
+        creatorDisplayName: creator?.display_name || undefined,
+        assigneeId: updatedCase.assignee_id,
+        assigneeDisplayName: assignee?.display_name || 'User',
+        resolutionNote: updatedCase.resolution_note,
+        createdAt: updatedCase.created_at,
+        updatedAt: updatedCase.updated_at,
+      };
+    });
+  }
+
+  /**
    * Retrieves a paginated list of cases scoped to the user's workspace.
    * Implements keyset cursor pagination with sort: priority DESC, created_at ASC, id ASC.
    */

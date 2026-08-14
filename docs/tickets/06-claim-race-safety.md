@@ -6,12 +6,12 @@
 
 **Status:** ready-for-agent
 
-- [ ] `POST /cases/:id/claim` endpoint (no request body needed — claimant is the JWT `sub`)
-- [ ] Atomic conditional UPDATE: `UPDATE cases SET assignee_id = $1, status = 'assigned', updated_at = now() WHERE id = $2 AND workspace_id = $3 AND status = 'open' AND assignee_id IS NULL RETURNING *`
-- [ ] If 0 rows returned: return `409 Conflict` with error code `CLAIM_CONFLICT` and a human-readable message
-- [ ] If case doesn't exist in the caller's workspace: return `404 Not Found`
-- [ ] On success: `INSERT INTO case_events` with `event_type = 'claimed'` and `actor_id = claimant` — within the same transaction as the UPDATE
-- [ ] After transaction commit, `EventEmitter2` emits a `case_claimed` event with `{ caseId, workspaceId }`
-- [ ] Response returns the updated case with assignee info
-- [ ] Claiming an already-assigned case (whether by self or another) returns `409 Conflict`
-- [ ] Claiming a resolved case returns `409 Conflict` or `400 Bad Request`
+- [x] `POST /cases/:id/claim` endpoint (no request body needed — claimant is the JWT `sub`)
+- [x] Atomic conditional UPDATE: `UPDATE cases SET assignee_id = $1, status = 'assigned', updated_at = now() WHERE id = $2 AND workspace_id = $3 AND status = 'open' AND assignee_id IS NULL RETURNING *`
+- [x] If 0 rows returned: return `409 Conflict` with error code `CLAIM_CONFLICT` and a human-readable message
+- [x] If case doesn't exist in the caller's workspace: return `404 Not Found`
+- [x] On success: `INSERT INTO case_events` with `event_type = 'claimed'` and `actor_id = claimant` — within the same transaction as the UPDATE
+- [x] After transaction commit, `EventEmitter2` emits a `case_claimed` event with `{ caseId, workspaceId }`
+- [x] Response returns the updated case with assignee info
+- [x] Claiming an already-assigned case (whether by self or another) returns `409 Conflict`
+- [x] Claiming a resolved case returns `409 Conflict` or `400 Bad Request`
