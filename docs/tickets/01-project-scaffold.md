@@ -6,12 +6,12 @@
 
 **Status:** ready-for-agent
 
-- [ ] Root `package.json` with npm workspaces: `api/`, `web/`, `packages/*`
-- [ ] `packages/shared/` with `package.json`, `tsconfig.json`, and placeholder exports for domain enums (`CaseStatus`, `CasePriority`, `WorkspaceMemberRole`) and error codes
-- [ ] `api/` initialized as a NestJS project (TypeScript), imports from `@signaldesk/shared`
-- [ ] `web/` initialized as a React + Vite + TypeScript project, imports from `@signaldesk/shared`
-- [ ] `supabase/` initialized via `supabase init`, `supabase start` runs and launches local Postgres + Auth
-- [ ] Kysely installed and configured in `api/` with a `DatabaseModule` providing the query builder (connection string from env)
-- [ ] TanStack Query installed in `web/`
-- [ ] `.env.example` committed with placeholder keys; `.env` in `.gitignore`
-- [ ] `npm install` from root installs all workspaces; `npm run dev` in each app boots without errors
+- [x] Root `package.json` with npm workspaces: `api/`, `web/`, `packages/*`
+- [x] `packages/shared/` with `package.json`, `tsconfig.json`, and placeholder exports for domain enums (`CaseStatus`, `CasePriority`, `WorkspaceMemberRole`) and error codes
+- [x] `api/` initialized as a NestJS project (TypeScript), imports from `@signaldesk/shared`
+- [x] `web/` initialized as a React + Vite + TypeScript project, imports from `@signaldesk/shared`
+- [x] `supabase/` initialized via `supabase init`, `supabase start` runs and launches local Postgres + Auth
+- [x] Kysely installed and configured in `api/` with a `DatabaseModule` providing the query builder (connection string from env)
+- [x] TanStack Query installed in `web/`
+- [x] `.env.example` committed with placeholder keys; `.env` in `.gitignore`
+- [x] `npm install` from root installs all workspaces; `npm run dev` in each app boots without errors
