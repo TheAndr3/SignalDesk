@@ -4,6 +4,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
 import { CasesModule } from './cases/cases.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { CasesModule } from './cases/cases.module';
     DatabaseModule,
     AuthModule,
     CasesModule,
+    EventsModule,
   ],
   controllers: [],
   providers: [],
