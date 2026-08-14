@@ -14,8 +14,11 @@ immutable Case Event history.
 
 1. Install dependencies with `npm install`.
 2. Copy `.env.example` to `.env`.
-3. Start the local Supabase stack with `npx supabase start` and copy its anon
-   key and service-role key into the matching `.env` entries.
+3. Start the local Supabase stack with `npx supabase start`. Copy the displayed
+   anon key into `VITE_SUPABASE_ANON_KEY` in `.env`. The default local
+   `DATABASE_URL` and `VITE_SUPABASE_URL` values can remain unchanged unless
+   the local Supabase ports were customized. A Supabase service-role key is not
+   required for this setup and must never be added to Vite-exposed variables.
 4. Start the API with `npm run dev:api`.
 5. Start the web application with `npm run dev:web`.
 6. Open `http://127.0.0.1:5173`.
@@ -122,3 +125,12 @@ Claim race safety, resolution authorization, Case Event history, and SSE
 freshness. The highest remaining production risk is the single-instance SSE
 delivery model; the next production step would be a durable cross-instance
 event transport and CI-managed integration infrastructure.
+
+## Submission message
+
+The application supports authenticated, Workspace-scoped Case creation,
+queueing, Claim, resolution, Case Event history, and live updates. No required
+vertical-slice behavior is intentionally incomplete. The highest remaining
+production risk is the single-instance SSE delivery model; a durable
+cross-instance transport and CI-managed integration environment would be the
+next production investment.
