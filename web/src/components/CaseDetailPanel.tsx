@@ -1,6 +1,7 @@
 import { useState, FC, FormEvent } from 'react';
 import {
   CaseEventType,
+  CaseDto,
   CaseStatus,
   WorkspaceMemberRole,
 } from '@signaldesk/shared';
@@ -19,6 +20,8 @@ import { useCaseDetail } from '../hooks/useCaseDetail';
 import { useMe } from '../hooks/useMe';
 import { apiFetch } from '../lib/api';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 interface CaseDetailPanelProps {
   caseId: string | null;
@@ -30,6 +33,8 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
   onClose,
 }) => {
   const queryClient = useQueryClient();
+  const { showSuccess } = useToast();
+  const { session } = useAuth();
   const { data: me } = useMe();
   const { data: caseItem, isLoading, isError, error } = useCaseDetail(caseId);
 
@@ -47,9 +52,14 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
     setActionError(null);
 
     try {
-      await apiFetch(`/cases/${caseId}/claim`, { method: 'POST' });
+      const claimedCase = await apiFetch<CaseDto>(`/cases/${caseId}/claim`, {
+        method: 'POST',
+      });
       queryClient.invalidateQueries({ queryKey: ['cases'] });
-      queryClient.invalidateQueries({ queryKey: ['case', caseId] });
+      queryClient.invalidateQueries({
+        queryKey: ['case', session?.user.id, caseId],
+      });
+      showSuccess(`${claimedCase.formattedReference} claimed successfully.`);
     } catch (err: any) {
       if (err?.error?.code === 'CLAIM_CONFLICT') {
         setActionError('This case was already claimed by another user.');
@@ -82,7 +92,9 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
       setShowResolveForm(false);
       setResolutionNote('');
       queryClient.invalidateQueries({ queryKey: ['cases'] });
-      queryClient.invalidateQueries({ queryKey: ['case', caseId] });
+      queryClient.invalidateQueries({
+        queryKey: ['case', session?.user.id, caseId],
+      });
     } catch (err: any) {
       setActionError(
         err?.error?.message || 'Failed to resolve case. Please check permissions.',

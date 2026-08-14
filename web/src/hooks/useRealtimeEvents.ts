@@ -28,7 +28,7 @@ export function useRealtimeEvents() {
           // Invalidate specific case detail query if applicable
           if (payload.caseId) {
             queryClient.invalidateQueries({
-              queryKey: ['case', payload.caseId],
+              queryKey: ['case', session.user.id, payload.caseId],
             });
           }
         }
@@ -45,5 +45,5 @@ export function useRealtimeEvents() {
     return () => {
       eventSource.close();
     };
-  }, [session?.access_token, queryClient]);
+  }, [session?.access_token, session?.user.id, queryClient]);
 }

@@ -14,5 +14,8 @@
     "typecheck": "npm run --workspace=packages/shared typecheck && npm run --workspace=api typecheck && npm run --workspace=web typecheck",
     "test": "npm run --workspace=api test",
     "test:integration": "npm run --workspace=api test:integration"
+  },
+  "devDependencies": {
+    "supabase": "^2.114.0"
   }
 }

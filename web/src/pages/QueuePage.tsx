@@ -1,14 +1,18 @@
-import { useState, useEffect, FC } from 'react';
+import { useState, useEffect, useRef, FC } from 'react';
 import { Header } from '../components/Header';
 import { QueueFilters } from '../components/QueueFilters';
 import { QueueTable } from '../components/QueueTable';
 import { CaseDetailPanel } from '../components/CaseDetailPanel';
+import { NewCaseDialog } from '../components/NewCaseDialog';
 import { CasesFilters, useInfiniteCases } from '../hooks/useCases';
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents';
 import { CaseDto } from '@signaldesk/shared';
-import { Inbox } from 'lucide-react';
+import { Inbox, Plus } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export const QueuePage: FC = () => {
+  const queryClient = useQueryClient();
+  const newCaseButtonRef = useRef<HTMLButtonElement>(null);
   // Subscribe to real-time Server-Sent Events
   useRealtimeEvents();
 
@@ -22,6 +26,7 @@ export const QueuePage: FC = () => {
     const params = new URLSearchParams(window.location.search);
     return params.get('case');
   });
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
 
   // Sync activeCaseId with URL query parameter (?case=<uuid>)
   useEffect(() => {
@@ -76,6 +81,15 @@ export const QueuePage: FC = () => {
                 </p>
               </div>
             </div>
+            <button
+              ref={newCaseButtonRef}
+              type="button"
+              className="action-button action-create-button"
+              onClick={() => setIsCreateDialogOpen(true)}
+            >
+              <Plus size={16} aria-hidden="true" />
+              <span>New Case</span>
+            </button>
           </div>
 
           <QueueFilters filters={filters} onChange={setFilters} />
@@ -104,6 +118,17 @@ export const QueuePage: FC = () => {
         <CaseDetailPanel
           caseId={activeCaseId}
           onClose={() => setActiveCaseId(null)}
+        />
+      )}
+
+      {isCreateDialogOpen && (
+        <NewCaseDialog
+          triggerRef={newCaseButtonRef}
+          onRequestClose={() => setIsCreateDialogOpen(false)}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['cases'] });
+            setIsCreateDialogOpen(false);
+          }}
         />
       )}
     </div>

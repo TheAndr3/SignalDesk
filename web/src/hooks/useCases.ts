@@ -13,7 +13,7 @@ export function useInfiniteCases(filters: CasesFilters) {
   const { session } = useAuth();
 
   return useInfiniteQuery<PaginatedCasesDto>({
-    queryKey: ['cases', filters],
+    queryKey: ['cases', session?.user.id, filters],
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams();
       if (filters.status && filters.status !== 'all') {
