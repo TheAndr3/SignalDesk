@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './auth/auth.module';
+import { CasesModule } from './cases/cases.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AuthModule } from './auth/auth.module';
     EventEmitterModule.forRoot(),
     DatabaseModule,
     AuthModule,
+    CasesModule,
   ],
   controllers: [],
   providers: [],
