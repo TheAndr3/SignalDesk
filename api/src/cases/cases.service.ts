@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CaseDto } from '@signaldesk/shared';
+import { CaseDto, ErrorCode, PaginatedCasesDto } from '@signaldesk/shared';
 import { CasesRepository } from './cases.repository';
 import { CreateCaseDto } from './dto/create-case.dto';
+import { ListCasesQueryDto } from './dto/list-cases-query.dto';
 
 @Injectable()
 export class CasesService {
@@ -30,5 +31,32 @@ export class CasesService {
     });
 
     return createdCase;
+  }
+
+  async findAll(
+    workspaceId: string,
+    currentUserId: string,
+    query: ListCasesQueryDto,
+  ): Promise<PaginatedCasesDto> {
+    return this.casesRepository.findAll(workspaceId, currentUserId, query);
+  }
+
+  async findById(workspaceId: string, caseId: string): Promise<CaseDto> {
+    const foundCase = await this.casesRepository.findById(workspaceId, caseId);
+
+    if (!foundCase) {
+      throw new HttpException(
+        {
+          error: {
+            code: ErrorCode.CASE_NOT_FOUND,
+            message: 'Case not found in current workspace',
+            statusCode: HttpStatus.NOT_FOUND,
+          },
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return foundCase;
   }
 }
