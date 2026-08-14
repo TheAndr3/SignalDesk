@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { CaseDto, CasePriority, CaseStatus } from '@signaldesk/shared';
 import { Clock, User } from 'lucide-react';
 
@@ -12,7 +12,7 @@ interface QueueTableProps {
   selectedCaseId?: string | null;
 }
 
-export const QueueTable: React.FC<QueueTableProps> = ({
+export const QueueTable: FC<QueueTableProps> = ({
   cases,
   isLoading,
   hasNextPage,

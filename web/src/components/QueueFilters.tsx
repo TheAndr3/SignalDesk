@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { CasePriority, CaseStatus } from '@signaldesk/shared';
 import { Filter, UserCheck, Users } from 'lucide-react';
 import { CasesFilters } from '../hooks/useCases';
@@ -8,7 +8,7 @@ interface QueueFiltersProps {
   onChange: (newFilters: CasesFilters) => void;
 }
 
-export const QueueFilters: React.FC<QueueFiltersProps> = ({
+export const QueueFilters: FC<QueueFiltersProps> = ({
   filters,
   onChange,
 }) => {

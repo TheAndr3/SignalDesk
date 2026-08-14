@@ -1,25 +1,49 @@
-import React, { useState } from 'react';
+import { useState, useEffect, FC } from 'react';
 import { Header } from '../components/Header';
 import { QueueFilters } from '../components/QueueFilters';
 import { QueueTable } from '../components/QueueTable';
+import { CaseDetailPanel } from '../components/CaseDetailPanel';
 import { CasesFilters, useInfiniteCases } from '../hooks/useCases';
+import { useRealtimeEvents } from '../hooks/useRealtimeEvents';
 import { CaseDto } from '@signaldesk/shared';
 import { Inbox } from 'lucide-react';
 
-interface QueuePageProps {
-  onSelectCase?: (caseItem: CaseDto) => void;
-  selectedCaseId?: string | null;
-}
+export const QueuePage: FC = () => {
+  // Subscribe to real-time Server-Sent Events
+  useRealtimeEvents();
 
-export const QueuePage: React.FC<QueuePageProps> = ({
-  onSelectCase,
-  selectedCaseId,
-}) => {
   const [filters, setFilters] = useState<CasesFilters>({
     status: 'all',
     priority: 'all',
     mine: false,
   });
+
+  const [activeCaseId, setActiveCaseId] = useState<string | null>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('case');
+  });
+
+  // Sync activeCaseId with URL query parameter (?case=<uuid>)
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (activeCaseId) {
+      url.searchParams.set('case', activeCaseId);
+    } else {
+      url.searchParams.delete('case');
+    }
+    window.history.pushState(null, '', url.toString());
+  }, [activeCaseId]);
+
+  // Handle popstate (browser back/forward navigation)
+  useEffect(() => {
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setActiveCaseId(params.get('case'));
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const {
     data,
@@ -31,7 +55,6 @@ export const QueuePage: React.FC<QueuePageProps> = ({
     fetchNextPage,
   } = useInfiniteCases(filters);
 
-  // Flatten paginated pages
   const cases: CaseDto[] =
     data?.pages.flatMap((page) => page.data) || [];
 
@@ -71,11 +94,18 @@ export const QueuePage: React.FC<QueuePageProps> = ({
             hasNextPage={!!hasNextPage}
             isFetchingNextPage={isFetchingNextPage}
             onFetchNextPage={() => fetchNextPage()}
-            onSelectCase={onSelectCase}
-            selectedCaseId={selectedCaseId}
+            onSelectCase={(caseItem) => setActiveCaseId(caseItem.id)}
+            selectedCaseId={activeCaseId}
           />
         </div>
       </main>
+
+      {activeCaseId && (
+        <CaseDetailPanel
+          caseId={activeCaseId}
+          onClose={() => setActiveCaseId(null)}
+        />
+      )}
     </div>
   );
 };

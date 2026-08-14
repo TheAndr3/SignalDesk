@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { QueuePage } from './pages/QueuePage';
-import { CaseDto } from '@signaldesk/shared';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,7 +14,6 @@ const queryClient = new QueryClient({
 
 function AppRouter() {
   const { session, loading } = useAuth();
-  const [selectedCase, setSelectedCase] = useState<CaseDto | null>(null);
 
   if (loading) {
     return (
@@ -31,12 +28,7 @@ function AppRouter() {
     return <LoginPage />;
   }
 
-  return (
-    <QueuePage
-      selectedCaseId={selectedCase?.id}
-      onSelectCase={(caseItem) => setSelectedCase(caseItem)}
-    />
-  );
+  return <QueuePage />;
 }
 
 export function App() {

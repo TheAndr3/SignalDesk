@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FC, FormEvent } from 'react';
 import { supabase } from '../lib/supabase';
 import { Shield, ArrowRight, UserCheck, AlertCircle } from 'lucide-react';
 
@@ -41,7 +41,7 @@ const SEED_USERS = [
   },
 ];
 
-export const LoginPage: React.FC = () => {
+export const LoginPage: FC = () => {
   const [email, setEmail] = useState('alice@acme.com');
   const [password, setPassword] = useState('Password123!');
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +53,7 @@ export const LoginPage: React.FC = () => {
     setErrorMessage(null);
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setErrorMessage(null);

@@ -1,10 +1,10 @@
-import React from 'react';
+import { FC } from 'react';
 import { Shield, LogOut, Building2, User } from 'lucide-react';
 import { WorkspaceMemberRole } from '@signaldesk/shared';
 import { useAuth } from '../context/AuthContext';
 import { useMe } from '../hooks/useMe';
 
-export const Header: React.FC = () => {
+export const Header: FC = () => {
   const { signOut } = useAuth();
   const { data: me, isLoading } = useMe();
 
