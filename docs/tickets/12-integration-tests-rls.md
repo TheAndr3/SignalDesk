@@ -6,6 +6,6 @@
 
 **Status:** ready-for-agent
 
-- [ ] Test harness: direct Postgres connection using the `authenticated` role (not service-role), with `SET LOCAL request.jwt.claims` to simulate a user's JWT
-- [ ] **Test 7 — Write Denial**: Using an `authenticated`-role connection with a valid Workspace A JWT, attempt `INSERT`, `UPDATE`, and `DELETE` on `cases` and `case_events`. Assert: all operations are denied with a permission error (not RLS filtering — the grants are revoked entirely at the role level)
-- [ ] **Test 8 — Read Isolation**: Using an `authenticated`-role connection with a Workspace A JWT, `SELECT` from `cases` filtering by a known Workspace B case ID (UUID documented in seed data). Assert: 0 rows returned — the case exists but RLS makes it invisible to the wrong workspace
+- [x] Test harness: direct Postgres connection using the `authenticated` role (not service-role), with `SET LOCAL request.jwt.claims` to simulate a user's JWT
+- [x] **Test 7 — Write Denial**: Using an `authenticated`-role connection with a valid Workspace A JWT, attempt `INSERT`, `UPDATE`, and `DELETE` on `cases` and `case_events`. Assert: all operations are denied with a permission error (not RLS filtering — the grants are revoked entirely at the role level)
+- [x] **Test 8 — Read Isolation**: Using an `authenticated`-role connection with a Workspace A JWT, `SELECT` from `cases` filtering by a known Workspace B case ID (UUID documented in seed data). Assert: 0 rows returned — the case exists but RLS makes it invisible to the wrong workspace
