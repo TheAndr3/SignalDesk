@@ -1,0 +1,21 @@
+{
+  "name": "signaldesk-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "api",
+    "web"
+  ],
+  "scripts": {
+    "build": "npm run --workspace=packages/shared build && npm run --workspace=api build && npm run --workspace=web build",
+    "dev:api": "npm run --workspace=api start:dev",
+    "dev:web": "npm run --workspace=web dev",
+    "typecheck": "npm run --workspace=packages/shared typecheck && npm run --workspace=api typecheck && npm run --workspace=web typecheck",
+    "test": "npm run --workspace=api test",
+    "test:integration": "npm run --workspace=api test:integration"
+  },
+  "devDependencies": {
+    "supabase": "^2.114.0"
+  }
+}
