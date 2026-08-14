@@ -18,6 +18,16 @@ describe('cursor.util', () => {
     });
   });
 
+  it('serializes a Date value as an ISO timestamp', () => {
+    const encoded = encodeCursor(
+      CasePriority.HIGH,
+      new Date('2026-08-14T00:00:00.000Z'),
+      'case-uuid-1234',
+    );
+
+    expect(decodeCursor(encoded)?.createdAt).toBe('2026-08-14T00:00:00.000Z');
+  });
+
   it('should return null for malformed base64 strings', () => {
     expect(decodeCursor('not-valid-base64-content!!')).toBeNull();
   });

@@ -21,6 +21,12 @@ interface CaseResponse {
   resolutionNote: string | null;
 }
 
+interface PaginatedCaseResponse {
+  data: CaseResponse[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
 interface ErrorResponse {
   error: { code: string };
 }
@@ -234,6 +240,32 @@ describe('Integration Tests: real NestJS HTTP seam (Tests 1–6, 9)', () => {
     expect(openResolution.status).toBe(400);
     expect((openResolution.body as ErrorResponse).error.code).toBe(
       ErrorCode.INVALID_STATE_TRANSITION,
+    );
+  });
+
+  it('Test 7: returns a non-overlapping second page from a server-issued cursor', async () => {
+    const firstPage = await requestJson<PaginatedCaseResponse>(
+      config.apiUrl,
+      '/cases?limit=2',
+      { method: 'GET' },
+      alice.accessToken,
+    );
+
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.data).toHaveLength(2);
+    expect(firstPage.body.nextCursor).toEqual(expect.any(String));
+
+    const secondPage = await requestJson<PaginatedCaseResponse>(
+      config.apiUrl,
+      `/cases?limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor!)}`,
+      { method: 'GET' },
+      alice.accessToken,
+    );
+
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.body.data).toHaveLength(2);
+    expect(secondPage.body.data.map((caseItem) => caseItem.id)).not.toEqual(
+      expect.arrayContaining(firstPage.body.data.map((caseItem) => caseItem.id)),
     );
   });
 

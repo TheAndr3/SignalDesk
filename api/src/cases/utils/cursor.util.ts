@@ -8,10 +8,11 @@ export interface DecodedCursor {
 
 export function encodeCursor(
   priority: CasePriority,
-  createdAt: string,
+  createdAt: string | Date,
   id: string,
 ): string {
-  const raw = `${priority}|${createdAt}|${id}`;
+  const timestamp = createdAt instanceof Date ? createdAt : new Date(createdAt);
+  const raw = `${priority}|${timestamp.toISOString()}|${id}`;
   return Buffer.from(raw, 'utf-8').toString('base64');
 }
 
