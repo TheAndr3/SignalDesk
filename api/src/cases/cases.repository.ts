@@ -8,11 +8,13 @@ import {
   CaseStatus,
   ErrorCode,
   PaginatedCasesDto,
+  WorkspaceMemberRole,
 } from '@signaldesk/shared';
 import { DATABASE_CONNECTION } from '../database/database.module';
 import { Database } from '../database/types';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { ListCasesQueryDto } from './dto/list-cases-query.dto';
+import { ResolveCaseDto } from './dto/resolve-case.dto';
 import { formatCaseReference } from './utils/case-reference.util';
 import { decodeCursor, encodeCursor } from './utils/cursor.util';
 
@@ -227,6 +229,156 @@ export class CasesRepository {
         creatorDisplayName: creator?.display_name || undefined,
         assigneeId: updatedCase.assignee_id,
         assigneeDisplayName: assignee?.display_name || 'User',
+        resolutionNote: updatedCase.resolution_note,
+        createdAt: updatedCase.created_at,
+        updatedAt: updatedCase.updated_at,
+      };
+    });
+  }
+
+  /**
+   * Resolves an assigned case with role-based authorization and mandatory resolution note.
+   * Agents can only resolve cases assigned to themselves; managers can resolve any assigned case.
+   * Atomic conditional UPDATE: SET status = 'resolved', resolution_note = $note WHERE id = $id AND workspace_id = $ws AND status = 'assigned' AND (role = 'manager' OR assignee_id = $userId).
+   */
+  async resolveCase(
+    workspaceId: string,
+    caseId: string,
+    resolverId: string,
+    resolverRole: WorkspaceMemberRole,
+    dto: ResolveCaseDto,
+  ): Promise<CaseDto> {
+    return this.db.transaction().execute(async (trx) => {
+      const isManager = resolverRole === WorkspaceMemberRole.MANAGER;
+      const trimmedNote = dto.resolutionNote.trim();
+
+      // 1. Atomic conditional UPDATE encoding both state guard and role authorization
+      let updateQuery = trx
+        .updateTable('cases')
+        .set({
+          status: CaseStatus.RESOLVED,
+          resolution_note: trimmedNote,
+          updated_at: new Date().toISOString(),
+        })
+        .where('id', '=', caseId)
+        .where('workspace_id', '=', workspaceId)
+        .where('status', '=', CaseStatus.ASSIGNED);
+
+      if (!isManager) {
+        updateQuery = updateQuery.where('assignee_id', '=', resolverId);
+      }
+
+      const updatedCase = await updateQuery.returningAll().executeTakeFirst();
+
+      if (!updatedCase) {
+        // Disambiguate failure reason
+        const existingCase = await trx
+          .selectFrom('cases')
+          .select(['id', 'status', 'assignee_id'])
+          .where('id', '=', caseId)
+          .where('workspace_id', '=', workspaceId)
+          .executeTakeFirst();
+
+        if (!existingCase) {
+          throw new HttpException(
+            {
+              error: {
+                code: ErrorCode.CASE_NOT_FOUND,
+                message: 'Case not found in current workspace',
+                statusCode: HttpStatus.NOT_FOUND,
+              },
+            },
+            HttpStatus.NOT_FOUND,
+          );
+        }
+
+        if (existingCase.status !== CaseStatus.ASSIGNED) {
+          throw new HttpException(
+            {
+              error: {
+                code: ErrorCode.INVALID_STATE_TRANSITION,
+                message:
+                  existingCase.status === CaseStatus.OPEN
+                    ? 'Cannot resolve an unassigned case. The case must be claimed first.'
+                    : 'Case is already resolved.',
+                statusCode: HttpStatus.BAD_REQUEST,
+              },
+            },
+            HttpStatus.BAD_REQUEST,
+          );
+        }
+
+        if (!isManager && existingCase.assignee_id !== resolverId) {
+          throw new HttpException(
+            {
+              error: {
+                code: ErrorCode.FORBIDDEN,
+                message: 'Agents can only resolve cases assigned to themselves.',
+                statusCode: HttpStatus.FORBIDDEN,
+              },
+            },
+            HttpStatus.FORBIDDEN,
+          );
+        }
+
+        throw new HttpException(
+          {
+            error: {
+              code: ErrorCode.FORBIDDEN,
+              message: 'Unable to resolve case with current permissions.',
+              statusCode: HttpStatus.FORBIDDEN,
+            },
+          },
+          HttpStatus.FORBIDDEN,
+        );
+      }
+
+      // 2. Insert resolved case_event within the same transaction
+      await trx
+        .insertInto('case_events')
+        .values({
+          case_id: updatedCase.id,
+          workspace_id: workspaceId,
+          event_type: CaseEventType.RESOLVED,
+          actor_id: resolverId,
+          payload: {
+            resolution_note: trimmedNote,
+            resolver_role: resolverRole,
+          },
+        })
+        .execute();
+
+      // 3. Fetch display names
+      const [creator, assignee] = await Promise.all([
+        trx
+          .selectFrom('workspace_members')
+          .select(['display_name'])
+          .where('user_id', '=', updatedCase.creator_id)
+          .where('workspace_id', '=', workspaceId)
+          .executeTakeFirst(),
+        updatedCase.assignee_id
+          ? trx
+              .selectFrom('workspace_members')
+              .select(['display_name'])
+              .where('user_id', '=', updatedCase.assignee_id)
+              .where('workspace_id', '=', workspaceId)
+              .executeTakeFirst()
+          : null,
+      ]);
+
+      return {
+        id: updatedCase.id,
+        reference: updatedCase.reference,
+        formattedReference: formatCaseReference(updatedCase.reference),
+        title: updatedCase.title,
+        description: updatedCase.description,
+        priority: updatedCase.priority as CasePriority,
+        status: updatedCase.status as CaseStatus,
+        workspaceId: updatedCase.workspace_id,
+        creatorId: updatedCase.creator_id,
+        creatorDisplayName: creator?.display_name || undefined,
+        assigneeId: updatedCase.assignee_id,
+        assigneeDisplayName: assignee?.display_name || undefined,
         resolutionNote: updatedCase.resolution_note,
         createdAt: updatedCase.created_at,
         updatedAt: updatedCase.updated_at,

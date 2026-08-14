@@ -1,9 +1,10 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CaseDto, ErrorCode, PaginatedCasesDto } from '@signaldesk/shared';
+import { CaseDto, ErrorCode, PaginatedCasesDto, WorkspaceMemberRole } from '@signaldesk/shared';
 import { CasesRepository } from './cases.repository';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { ListCasesQueryDto } from './dto/list-cases-query.dto';
+import { ResolveCaseDto } from './dto/resolve-case.dto';
 
 @Injectable()
 export class CasesService {
@@ -79,5 +80,30 @@ export class CasesService {
     });
 
     return claimedCase;
+  }
+
+  async resolveCase(
+    workspaceId: string,
+    caseId: string,
+    resolverId: string,
+    resolverRole: WorkspaceMemberRole,
+    dto: ResolveCaseDto,
+  ): Promise<CaseDto> {
+    const resolvedCase = await this.casesRepository.resolveCase(
+      workspaceId,
+      caseId,
+      resolverId,
+      resolverRole,
+      dto,
+    );
+
+    // Emit event after transaction commit for SSE consumers
+    this.eventEmitter.emit('case_resolved', {
+      type: 'case_resolved',
+      caseId: resolvedCase.id,
+      workspaceId,
+    });
+
+    return resolvedCase;
   }
 }

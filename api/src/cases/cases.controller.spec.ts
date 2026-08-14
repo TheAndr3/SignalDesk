@@ -5,6 +5,7 @@ import { CasesService } from './cases.service';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { ListCasesQueryDto } from './dto/list-cases-query.dto';
+import { ResolveCaseDto } from './dto/resolve-case.dto';
 
 describe('CasesController', () => {
   let controller: CasesController;
@@ -81,6 +82,23 @@ describe('CasesController', () => {
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             }),
+            resolveCase: jest.fn().mockResolvedValue({
+              id: 'case-uuid-1234',
+              reference: 1,
+              formattedReference: 'CASE-0001',
+              title: 'API endpoint latency issue',
+              description: null,
+              priority: CasePriority.URGENT,
+              status: CaseStatus.RESOLVED,
+              workspaceId: mockUser.workspaceId,
+              creatorId: mockUser.userId,
+              creatorDisplayName: 'Alice Smith',
+              assigneeId: mockUser.userId,
+              assigneeDisplayName: 'Alice Smith',
+              resolutionNote: 'Fixed configuration issue.',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }),
           },
         },
       ],
@@ -148,5 +166,23 @@ describe('CasesController', () => {
     );
     expect(result.status).toBe(CaseStatus.ASSIGNED);
     expect(result.assigneeId).toBe(mockUser.userId);
+  });
+
+  it('should call casesService.resolveCase with user context and resolution dto', async () => {
+    const dto: ResolveCaseDto = {
+      resolutionNote: 'Fixed configuration issue.',
+    };
+
+    const result = await controller.resolveCase(mockUser, 'case-uuid-1234', dto);
+
+    expect(casesService.resolveCase).toHaveBeenCalledWith(
+      mockUser.workspaceId,
+      'case-uuid-1234',
+      mockUser.userId,
+      mockUser.role,
+      dto,
+    );
+    expect(result.status).toBe(CaseStatus.RESOLVED);
+    expect(result.resolutionNote).toBe('Fixed configuration issue.');
   });
 });

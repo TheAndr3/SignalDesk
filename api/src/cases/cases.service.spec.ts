@@ -1,10 +1,11 @@
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { HttpException, HttpStatus } from '@nestjs/common';
-import { CasePriority, CaseStatus, ErrorCode } from '@signaldesk/shared';
+import { CasePriority, CaseStatus, ErrorCode, WorkspaceMemberRole } from '@signaldesk/shared';
 import { CasesService } from './cases.service';
 import { CasesRepository } from './cases.repository';
 import { CreateCaseDto } from './dto/create-case.dto';
 import { ListCasesQueryDto } from './dto/list-cases-query.dto';
+import { ResolveCaseDto } from './dto/resolve-case.dto';
 
 describe('CasesService', () => {
   let service: CasesService;
@@ -20,6 +21,7 @@ describe('CasesService', () => {
       findAll: jest.fn(),
       findById: jest.fn(),
       claimCase: jest.fn(),
+      resolveCase: jest.fn(),
     } as any;
 
     mockEventEmitter = {
@@ -167,5 +169,52 @@ describe('CasesService', () => {
       workspaceId,
     });
     expect(result).toEqual(mockClaimedCase);
+  });
+
+  it('should resolve case and emit case_resolved event', async () => {
+    const resolveDto: ResolveCaseDto = {
+      resolutionNote: 'Fixed configuration issue.',
+    };
+
+    const mockResolvedCase = {
+      id: 'case-uuid-1234',
+      reference: 1,
+      formattedReference: 'CASE-0001',
+      title: 'Valid Case',
+      description: null,
+      priority: CasePriority.LOW,
+      status: CaseStatus.RESOLVED,
+      workspaceId,
+      creatorId,
+      assigneeId: creatorId,
+      assigneeDisplayName: 'Alice Smith',
+      resolutionNote: 'Fixed configuration issue.',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    mockRepository.resolveCase.mockResolvedValue(mockResolvedCase);
+
+    const result = await service.resolveCase(
+      workspaceId,
+      'case-uuid-1234',
+      creatorId,
+      WorkspaceMemberRole.AGENT,
+      resolveDto,
+    );
+
+    expect(mockRepository.resolveCase).toHaveBeenCalledWith(
+      workspaceId,
+      'case-uuid-1234',
+      creatorId,
+      WorkspaceMemberRole.AGENT,
+      resolveDto,
+    );
+    expect(mockEventEmitter.emit).toHaveBeenCalledWith('case_resolved', {
+      type: 'case_resolved',
+      caseId: 'case-uuid-1234',
+      workspaceId,
+    });
+    expect(result).toEqual(mockResolvedCase);
   });
 });
