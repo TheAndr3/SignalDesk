@@ -1,4 +1,11 @@
-import { useState, FC, FormEvent } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  FC,
+  FormEvent,
+  KeyboardEvent,
+} from 'react';
 import {
   CaseEventType,
   CaseDto,
@@ -44,6 +51,39 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
   const [resolutionNote, setResolutionNote] = useState('');
   const [noteError, setNoteError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+    return () => returnFocusRef.current?.focus();
+  }, []);
+
+  const trapPanelFocus = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+    const focusable = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])',
+      ),
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   if (!caseId) return null;
 
@@ -129,6 +169,9 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={caseItem ? 'case-detail-title' : undefined}
+        aria-label={caseItem ? undefined : 'Case details'}
+        onKeyDown={trapPanelFocus}
       >
         {/* Panel Header */}
         <div className="panel-header">
@@ -152,6 +195,7 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
             )}
           </div>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="panel-close-button"
             aria-label="Close panel"
@@ -190,7 +234,7 @@ export const CaseDetailPanel: FC<CaseDetailPanelProps> = ({
             <>
               {/* Main Info */}
               <div className="case-main-section">
-                <h2 className="case-detail-title">{caseItem.title}</h2>
+                <h2 id="case-detail-title" className="case-detail-title">{caseItem.title}</h2>
                 {caseItem.description ? (
                   <p className="case-detail-description">
                     {caseItem.description}

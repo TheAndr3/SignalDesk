@@ -90,6 +90,38 @@ export const QueueTable: FC<QueueTableProps> = ({
 
   return (
     <div className="queue-table-wrapper">
+      <div className="mobile-case-list" aria-label="Cases">
+        {cases.map((c) => {
+          const isSelected = selectedCaseId === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              className={`mobile-case-card ${isSelected ? 'selected' : ''}`}
+              onClick={() => onSelectCase?.(c)}
+              aria-label={`Open ${c.formattedReference}: ${c.title}`}
+            >
+              <span className="mobile-case-card-topline">
+                <span className="reference-pill">{c.formattedReference}</span>
+                <span className={`status-badge ${getStatusClass(c.status)}`}>
+                  {c.status.toUpperCase()}
+                </span>
+              </span>
+              <span className="mobile-case-title">{c.title}</span>
+              <span className="mobile-case-card-meta">
+                <span className={`priority-badge ${getPriorityClass(c.priority)}`}>
+                  {c.priority.toUpperCase()}
+                </span>
+                <span className="mobile-case-assignee">
+                  <User size={13} aria-hidden="true" />
+                  {c.assigneeDisplayName || 'Unassigned'}
+                </span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       <table className="queue-table">
         <thead>
           <tr>

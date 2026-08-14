@@ -7,6 +7,7 @@ import { useMe } from '../hooks/useMe';
 export const Header: FC = () => {
   const { signOut } = useAuth();
   const { data: me, isLoading } = useMe();
+  const firstName = me?.displayName.split(/\s+/)[0];
 
   return (
     <header className="app-header">
@@ -34,7 +35,8 @@ export const Header: FC = () => {
               <div className="user-info">
                 <span className="user-name">
                   <User size={13} style={{ display: 'inline', marginRight: '4px' }} />
-                  {me.displayName}
+                  <span className="user-full-name">{me.displayName}</span>
+                  <span className="user-first-name">{firstName}</span>
                 </span>
                 <span
                   className={`role-badge ${

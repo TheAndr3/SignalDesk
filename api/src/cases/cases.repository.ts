@@ -424,6 +424,7 @@ export class CasesRepository {
         'cases.resolution_note',
         'cases.created_at',
         'cases.updated_at',
+        sql<string>`cases.created_at::text`.as('cursor_created_at'),
       ])
       .where('cases.workspace_id', '=', workspaceId);
 
@@ -496,7 +497,7 @@ export class CasesRepository {
       const lastItem = items[items.length - 1];
       nextCursor = encodeCursor(
         lastItem.priority as CasePriority,
-        lastItem.created_at,
+        lastItem.cursor_created_at,
         lastItem.id,
       );
     }

@@ -243,30 +243,35 @@ describe('Integration Tests: real NestJS HTTP seam (Tests 1–6, 9)', () => {
     );
   });
 
-  it('Test 7: returns a non-overlapping second page from a server-issued cursor', async () => {
-    const firstPage = await requestJson<PaginatedCaseResponse>(
-      config.apiUrl,
-      '/cases?limit=2',
-      { method: 'GET' },
-      alice.accessToken,
-    );
+  it('Test 7: returns every Case once when following server-issued cursors', async () => {
+    const caseIds = new Set<string>();
+    let cursor: string | null = null;
+    let pageCount = 0;
 
-    expect(firstPage.status).toBe(200);
-    expect(firstPage.body.data).toHaveLength(2);
-    expect(firstPage.body.nextCursor).toEqual(expect.any(String));
+    do {
+      const query = cursor
+        ? `/cases?limit=2&cursor=${encodeURIComponent(cursor)}`
+        : '/cases?limit=2';
+      const page = await requestJson<PaginatedCaseResponse>(
+        config.apiUrl,
+        query,
+        { method: 'GET' },
+        alice.accessToken,
+      );
 
-    const secondPage = await requestJson<PaginatedCaseResponse>(
-      config.apiUrl,
-      `/cases?limit=2&cursor=${encodeURIComponent(firstPage.body.nextCursor!)}`,
-      { method: 'GET' },
-      alice.accessToken,
-    );
+      expect(page.status).toBe(200);
+      expect(page.body.data).not.toHaveLength(0);
+      for (const caseItem of page.body.data) {
+        expect(caseIds.has(caseItem.id)).toBe(false);
+        caseIds.add(caseItem.id);
+      }
 
-    expect(secondPage.status).toBe(200);
-    expect(secondPage.body.data).toHaveLength(2);
-    expect(secondPage.body.data.map((caseItem) => caseItem.id)).not.toEqual(
-      expect.arrayContaining(firstPage.body.data.map((caseItem) => caseItem.id)),
-    );
+      cursor = page.body.nextCursor;
+      pageCount += 1;
+      expect(pageCount).toBeLessThan(100);
+    } while (cursor);
+
+    expect(caseIds.size).toBeGreaterThan(2);
   });
 
   it('Test 9: emits a Case mutation through the authenticated HTTP SSE stream', async () => {

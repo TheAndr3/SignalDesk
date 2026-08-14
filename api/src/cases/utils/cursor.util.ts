@@ -11,8 +11,8 @@ export function encodeCursor(
   createdAt: string | Date,
   id: string,
 ): string {
-  const timestamp = createdAt instanceof Date ? createdAt : new Date(createdAt);
-  const raw = `${priority}|${timestamp.toISOString()}|${id}`;
+  const timestamp = createdAt instanceof Date ? createdAt.toISOString() : createdAt;
+  const raw = `${priority}|${timestamp}|${id}`;
   return Buffer.from(raw, 'utf-8').toString('base64');
 }
 
