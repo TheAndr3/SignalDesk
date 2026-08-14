@@ -82,7 +82,7 @@ WHERE id = $2 AND workspace_id = $3 AND status = 'assigned'
 RETURNING *;
 ```
 
-If 0 rows returned, the endpoint returns `400 Bad Request` (invalid state transition — case is not `assigned`) or `403 Forbidden` (agent attempting to resolve another agent's case). The service layer disambiguates by first fetching the case to determine which condition failed.
+The conditional update and `resolved` case-event insert execute in one database transaction. The service emits the corresponding SSE event only after that transaction commits. If 0 rows are returned, the endpoint returns `400 Bad Request` (invalid state transition — case is not `assigned`) or `403 Forbidden` (agent attempting to resolve another agent's case). The service layer disambiguates by first fetching the case within the caller's workspace to determine which condition failed.
 
 ### Claim Race (Atomic Conditional UPDATE)
 
@@ -93,7 +93,7 @@ WHERE id = $2 AND workspace_id = $3 AND status = 'open' AND assignee_id IS NULL
 RETURNING *;
 ```
 
-If 0 rows returned, return HTTP 409 with error code `CLAIM_CONFLICT`. The UPDATE + case event INSERT are wrapped in a single transaction for atomicity.
+If the conditional update returns 0 rows, the service performs a workspace-scoped lookup. If the case is not visible in the caller's workspace, it returns `404 Not Found` without revealing whether the ID exists elsewhere. If the case is visible, it returns HTTP `409` with error code `CLAIM_CONFLICT`. The UPDATE + case-event INSERT are wrapped in a single transaction, and the corresponding SSE event is emitted only after commit.
 
 ### Reference Counter (Atomic Increment)
 
@@ -104,7 +104,7 @@ WHERE id = $1
 RETURNING case_counter;
 ```
 
-Executed inside the create-case transaction. The returned counter becomes the case's `reference` column, stored as a raw `integer` in Postgres. Human-readable formatting (e.g. `CASE-0042` — the `CASE-` prefix + 4-digit zero padding) is applied at the API/DTO edge boundary, not stored in the database.
+Executed inside the create-case transaction. The returned counter becomes the case's `reference` column, stored as a raw `bigint` in Postgres. The counter increment, case insert, and `created` case-event insert all commit or roll back together; the SSE event is emitted only after commit. Human-readable formatting (e.g. `CASE-0042` — the `CASE-` prefix + 4-digit zero padding) is applied at the API/DTO edge boundary, not stored in the database.
 
 The row-level lock on the workspace row serializes concurrent case creations within the same workspace. This is an intentional trade-off: serialization guarantees strictly gapless, collision-free human references without requiring separate Postgres sequences per workspace. The serialization window is narrow (one transaction's duration), making contention negligible for typical queue workloads.
 
@@ -115,16 +115,16 @@ Per [ADR-0001](docs/adr/0001-authenticated-role-select-only.md):
 - **`authenticated` role**: `SELECT` only on `cases`, `case_events`, `workspace_members`, with RLS policies enforcing `workspace_id = auth.jwt() ->> 'workspace_id'`.
 - **`anon` role**: explicit `REVOKE ALL` on all application tables.
 - **NestJS**: connects with the `service_role` key (bypasses RLS). All writes go through NestJS, which enforces state-machine transitions, role authorization, and required fields in application code.
-- **Auth Hook**: a Postgres function invoked by Supabase Auth during token generation. Looks up the user's `workspace_id` from `workspace_members` and stamps it into the JWT as a custom claim. Permissions: `GRANT EXECUTE TO supabase_auth_admin`, `REVOKE FROM PUBLIC, authenticated, anon`.
+- **Auth Hook**: a Postgres function invoked by Supabase Auth during token generation. It looks up the user's `workspace_id` and application `workspace_role` from `workspace_members` and stamps both into the JWT as custom claims. It preserves Supabase's reserved `role = authenticated` claim; application authorization never uses that claim. Permissions: `GRANT EXECUTE TO supabase_auth_admin`, `REVOKE FROM PUBLIC, authenticated, anon`.
 - **Service-role key**: stored in `.env` (server-side), listed in `.gitignore`, never committed. `.env.example` committed with placeholders. Frontend uses only the public `anon` key.
 
 ### NestJS Architecture
 
 Four modules:
 
-- **AuthModule**: `passport-jwt` strategy validating against `SUPABASE_JWT_SECRET`. Global `AuthGuard` extracts `sub`, `workspace_id`, and `role` from JWT claims. Rejects requests with missing `workspace_id` as 403.
+- **AuthModule**: `passport-jwt` strategy validating Supabase JWTs. Global `AuthGuard` extracts `sub`, `workspace_id`, and `workspace_role` from signed JWT claims. It rejects requests with a missing workspace context as 403 and never accepts a role supplied in the request.
 - **CasesModule**: `CasesService` + `CasesRepository` + `CasesController`. The repository enforces `workspaceId` as a required first parameter on every method — TypeScript won't compile without it.
-- **EventsModule**: in-process `EventEmitter` + SSE controller endpoint. Fires typed events (`case_created`, `case_claimed`, `case_resolved`) with case ID after successful mutations. Per [ADR-0002](docs/adr/0002-sse-over-supabase-realtime.md).
+- **EventsModule**: in-process `EventEmitter` + authenticated SSE controller endpoint. Each connection is bound to the workspace derived by `AuthGuard`; it receives only events for that workspace. The module fires typed events (`case_created`, `case_claimed`, `case_resolved`) with case ID only after successful transaction commits. Per [ADR-0002](docs/adr/0002-sse-over-supabase-realtime.md).
 - **DatabaseModule**: Kysely instance configured with the service-role connection string. Provides the query builder to repositories.
 
 ### Input Validation
@@ -176,8 +176,8 @@ The "Mine" filter strictly maps to `WHERE assignee_id = current_user_id`. It sho
 
 Per [ADR-0002](docs/adr/0002-sse-over-supabase-realtime.md):
 
-- NestJS fires typed events via an in-process `EventEmitter` after each successful mutation.
-- An SSE endpoint streams events to connected clients. Events carry `{ type, caseId }` — enough for toast notifications.
+- NestJS fires typed events via an in-process `EventEmitter` only after each mutation transaction commits.
+- The authenticated SSE endpoint binds each connection to the workspace in its signed JWT and streams only that workspace's events. Events carry `{ type, caseId }` — enough for toast notifications.
 - The client calls `queryClient.invalidateQueries()` on each event, triggering a re-fetch through the API. No client-side state patching.
 - On SSE reconnect (automatic via `EventSource`), the client invalidates all caches and re-fetches.
 - Single-instance limitation. Production path: replace in-process emitter with Redis pub/sub.
@@ -228,15 +228,15 @@ Integration tests run against a real Supabase Postgres (via `supabase start`). E
 - Any resolution attempt with a missing or empty `resolution_note` returns `400 Bad Request`.
 - Attempting to resolve an `open` (unassigned) case or an already `resolved` case returns `400 Bad Request`.
 
-**Test 9 — SSE Event Emission**: After a successful case creation, claim, or resolve, verify that the corresponding typed event (`case_created`, `case_claimed`, `case_resolved`) is emitted on the SSE stream for the workspace. Connect an SSE client to `GET /events/stream`, perform a mutation, and assert the event arrives with the correct type and case ID.
+**Test 7 — SSE Event Emission**: After a successful case creation, claim, or resolve, verify that the corresponding typed event (`case_created`, `case_claimed`, `case_resolved`) is emitted on the authenticated SSE stream for the caller's workspace. Connect an SSE client to `GET /events/stream`, perform a mutation, and assert the event arrives with the correct type and case ID.
 
 ### Seam 2: Direct Postgres with RLS
 
 These tests bypass NestJS entirely. They connect to Postgres using the `authenticated` role with a crafted JWT, proving the database-level defenses work independently.
 
-**Test 7 — Write Denial**: Using an `authenticated`-role connection with a valid Workspace A JWT, attempt `INSERT`, `UPDATE`, and `DELETE` on `cases` and `case_events`. Assert: all operations are denied (permission error, not RLS filtering — the grants are revoked entirely).
+**Test 8 — Write Denial**: Using an `authenticated`-role connection with a valid Workspace A JWT, attempt `INSERT`, `UPDATE`, and `DELETE` on `cases` and `case_events`. Assert: all operations are denied (permission error, not RLS filtering — the grants are revoked entirely).
 
-**Test 8 — Read Isolation**: Using an `authenticated`-role connection with a Workspace A JWT, `SELECT` from `cases` filtering by a known Workspace B case ID. Assert: 0 rows returned. The case exists but RLS makes it invisible.
+**Test 9 — Read Isolation**: Using an `authenticated`-role connection with a Workspace A JWT, `SELECT` from `cases` filtering by a known Workspace B case ID. Assert: 0 rows returned. The case exists but RLS makes it invisible.
 
 ### What Is NOT Tested Automatically
 
@@ -255,11 +255,19 @@ These tests bypass NestJS entirely. They connect to Postgres using the `authenti
 - **E2E browser tests**: UI states verified manually.
 - **Deployment**: local execution only.
 
+## Assumptions and Unanswered Questions
+
+No stakeholder answers were available during the timebox, so the following defaults were recorded and used to keep the vertical slice moving.
+
+- **Membership and authorization**: every Auth account belongs to exactly one workspace. Any workspace member can claim an open case; agents resolve only their own assigned cases, while managers can resolve any assigned case in their workspace.
+- **Case lifecycle**: cases are not edited, reassigned, reopened, or deleted. `resolved` is terminal.
+- **Freshness**: a single API instance is sufficient for this local exercise. A production deployment requires a durable cross-instance event transport before scaling horizontally.
+- **Open product questions before production**: confirm whether cases need reassignment or reopening, define audit/history retention and access rules, and decide how membership or role changes should revoke or refresh already-issued JWTs.
+
 ## Further Notes
 
 - The domain glossary is maintained in `CONTEXT.md` at the repo root. All code, comments, UI copy, and API naming must use the canonical terms defined there.
 - Architectural decisions are recorded in `docs/adr/`. Two ADRs exist: [0001 — authenticated role SELECT only](docs/adr/0001-authenticated-role-select-only.md) and [0002 — SSE over Supabase Realtime](docs/adr/0002-sse-over-supabase-realtime.md).
 - The `description` field on cases is optional. `title` and `priority` are required on creation.
-- The `/me` endpoint returns the user's display name, role, and workspace info. The JWT stays lean (IDs and role only); display data comes from the API.
+- The `/me` endpoint returns the user's display name, role, and workspace info. The JWT contains the signed identity, `workspace_id`, and `workspace_role`; display data comes from the API.
 - The login page includes a user-switcher dropdown that pre-fills credentials for seeded users. It still submits through Supabase Auth — no token shortcuts.
-- **Production index recommendation**: document in `README.md` that a composite index on `(workspace_id, priority, created_at, id)` should be added for production workloads. The index supports the cursor-based pagination query and the workspace-scoped sort order. For the seed-data scale of this challenge, Postgres sequential scans are fast enough without it.

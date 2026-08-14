@@ -46,8 +46,10 @@ It does not start Docker or NestJS itself.
 
 The React application authenticates through Supabase Auth and sends its access
 token only to NestJS. NestJS is the application trust boundary: it derives the
-actor, Workspace, and application role from JWT claims and is the sole path for
-all Case mutations.
+actor, Workspace, and `workspace_role` from signed JWT claims and is the sole
+path for all Case mutations. A case outside that Workspace is treated as absent
+(`404`); `409 CLAIM_CONFLICT` is reserved for a visible case that another user
+claimed first.
 
 The Supabase JWT hook adds `workspace_id`, `workspace_role`, and
 `display_name`. It intentionally preserves the reserved Supabase
@@ -58,7 +60,10 @@ tokens.
 PostgreSQL grants the `authenticated` role SELECT-only access. RLS filters
 Workspace-scoped reads using `workspace_id`; writes use the server-side
 PostgreSQL connection through NestJS, which enforces the Case state machine,
-role rules, validation, and multi-statement transactions.
+role rules, validation, and multi-statement transactions. Each create, Claim,
+or resolve operation writes its Case Event in the same transaction and emits
+its SSE notification only after commit. The authenticated SSE stream is scoped
+to the Workspace derived from the connection's JWT.
 
 ## Data model
 
@@ -69,8 +74,8 @@ role rules, validation, and multi-statement transactions.
 - **Case Event** is an append-only record of Case creation, Claim, and
   resolution.
 
-References are incremented atomically per Workspace. Claim and resolve updates
-use conditional SQL updates and write their Case Events in the same transaction.
+References are incremented atomically per Workspace. Create, Claim, and resolve
+updates write their Case Events in the same transaction.
 
 ## Verification
 
@@ -92,15 +97,23 @@ counter remains monotonic. The atomicity test installs and removes a
 fixture-specific PostgreSQL trigger to force the event-insert failure after the
 Case update is attempted.
 
-## Assumptions and trade-offs
+## Assumptions and unanswered questions
 
-- Each Auth account belongs to at most one Workspace.
+- Each Auth account belongs to exactly one Workspace. Any Workspace member may
+  Claim an open Case; Agents resolve only their own Cases and Managers may
+  resolve any assigned Case in their Workspace.
+- Cases are not edited, reassigned, reopened, or deleted; resolved is terminal.
 - The in-process SSE emitter is intentionally single-instance. Redis pub/sub or
   PostgreSQL notifications would be required for multi-instance production.
 - Browser E2E and visual UI-state tests are manual verification work; the
   highest-risk server behavior is covered by the real integration seams.
 - Integration tests require a developer-controlled local Supabase stack and API
   process. CI container orchestration is intentionally not included.
+
+No stakeholder answers were available during the timebox. Before production,
+confirm the reassignment/reopening policy, Case Event retention and audit-access
+requirements, and how a membership or role change should revoke or refresh an
+already-issued JWT.
 
 ## Final status
 
