@@ -6,16 +6,16 @@
 
 **Status:** ready-for-agent
 
-- [ ] Login page with email/password form and a user-switcher dropdown listing seeded users (pre-fills credentials, still submits through Supabase Auth)
-- [ ] Supabase JS client initialized with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-- [ ] On successful login, JWT is stored and included as `Authorization: Bearer <token>` on all API requests
-- [ ] `useMe()` hook calls `GET /me`, cached by TanStack Query for the session
-- [ ] Authenticated layout shell: workspace name, user display name, role badge, logout button
-- [ ] Unauthenticated users are redirected to the login page
-- [ ] Queue page fetches cases from `GET /cases` and renders a table/list with reference, title, priority, status, assignee display name, and created_at
-- [ ] Cursor-based pagination controls (Next / Previous or infinite scroll with "Load more")
-- [ ] Status filter dropdown (open, assigned, resolved, all)
-- [ ] Mine/All toggle
-- [ ] Priority filter dropdown
-- [ ] Loading state while fetching cases
-- [ ] Empty state when no cases match the current filters
+- [x] Login page with email/password form and a user-switcher dropdown listing seeded users (pre-fills credentials, still submits through Supabase Auth)
+- [x] Supabase JS client initialized with `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
+- [x] On successful login, JWT is stored and included as `Authorization: Bearer <token>` on all API requests
+- [x] `useMe()` hook calls `GET /me`, cached by TanStack Query for the session
+- [x] Authenticated layout shell: workspace name, user display name, role badge, logout button
+- [x] Unauthenticated users are redirected to the login page
+- [x] Queue page fetches cases from `GET /cases` and renders a table/list with reference, title, priority, status, assignee display name, and created_at
+- [x] Cursor-based pagination controls (Next / Previous or infinite scroll with "Load more")
+- [x] Status filter dropdown (open, assigned, resolved, all)
+- [x] Mine/All toggle
+- [x] Priority filter dropdown
+- [x] Loading state while fetching cases
+- [x] Empty state when no cases match the current filters
