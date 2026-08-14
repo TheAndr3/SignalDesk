@@ -6,11 +6,11 @@
 
 **Status:** ready-for-agent
 
-- [ ] `AuthModule` with `passport-jwt` strategy validating against `SUPABASE_JWT_SECRET` from env
-- [ ] Global `AuthGuard` applied to all routes (except explicit public routes, if any)
-- [ ] Guard extracts `sub` (user ID), `workspace_id`, and `role` from JWT claims and attaches them to the request context
-- [ ] Requests where `workspace_id` is missing from JWT claims are rejected with `403 Forbidden` before any database access
-- [ ] Requests with invalid or expired JWTs are rejected with `401 Unauthorized`
-- [ ] `GET /me` endpoint returns `{ userId, displayName, role, workspace: { id, name } }` by looking up `workspace_members` + `workspaces` via the service-role Kysely connection
-- [ ] A request with a valid seeded-user JWT to `GET /me` returns the correct user profile
-- [ ] Global `ValidationPipe` configured with `whitelist: true` and `forbidNonWhitelisted: true` (using `class-validator` / `class-transformer`)
+- [x] `AuthModule` with `passport-jwt` strategy validating against `SUPABASE_JWT_SECRET` from env
+- [x] Global `AuthGuard` applied to all routes (except explicit public routes, if any)
+- [x] Guard extracts `sub` (user ID), `workspace_id`, and `role` from JWT claims and attaches them to the request context
+- [x] Requests where `workspace_id` is missing from JWT claims are rejected with `403 Forbidden` before any database access
+- [x] Requests with invalid or expired JWTs are rejected with `401 Unauthorized`
+- [x] `GET /me` endpoint returns `{ userId, displayName, role, workspace: { id, name } }` by looking up `workspace_members` + `workspaces` via the service-role Kysely connection
+- [x] A request with a valid seeded-user JWT to `GET /me` returns the correct user profile
+- [x] Global `ValidationPipe` configured with `whitelist: true` and `forbidNonWhitelisted: true` (using `class-validator` / `class-transformer`)
