@@ -1,8 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { CaseDto } from '@signaldesk/shared';
+import { CaseDto, ErrorCode, PaginatedCasesDto, WorkspaceMemberRole } from '@signaldesk/shared';
 import { CasesRepository } from './cases.repository';
 import { CreateCaseDto } from './dto/create-case.dto';
+import { ListCasesQueryDto } from './dto/list-cases-query.dto';
+import { ResolveCaseDto } from './dto/resolve-case.dto';
 
 @Injectable()
 export class CasesService {
@@ -30,5 +32,78 @@ export class CasesService {
     });
 
     return createdCase;
+  }
+
+  async findAll(
+    workspaceId: string,
+    currentUserId: string,
+    query: ListCasesQueryDto,
+  ): Promise<PaginatedCasesDto> {
+    return this.casesRepository.findAll(workspaceId, currentUserId, query);
+  }
+
+  async findById(workspaceId: string, caseId: string): Promise<CaseDto> {
+    const foundCase = await this.casesRepository.findById(workspaceId, caseId);
+
+    if (!foundCase) {
+      throw new HttpException(
+        {
+          error: {
+            code: ErrorCode.CASE_NOT_FOUND,
+            message: 'Case not found in current workspace',
+            statusCode: HttpStatus.NOT_FOUND,
+          },
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return foundCase;
+  }
+
+  async claimCase(
+    workspaceId: string,
+    caseId: string,
+    claimantId: string,
+  ): Promise<CaseDto> {
+    const claimedCase = await this.casesRepository.claimCase(
+      workspaceId,
+      caseId,
+      claimantId,
+    );
+
+    // Emit event after transaction commit for SSE consumers
+    this.eventEmitter.emit('case_claimed', {
+      type: 'case_claimed',
+      caseId: claimedCase.id,
+      workspaceId,
+    });
+
+    return claimedCase;
+  }
+
+  async resolveCase(
+    workspaceId: string,
+    caseId: string,
+    resolverId: string,
+    resolverRole: WorkspaceMemberRole,
+    dto: ResolveCaseDto,
+  ): Promise<CaseDto> {
+    const resolvedCase = await this.casesRepository.resolveCase(
+      workspaceId,
+      caseId,
+      resolverId,
+      resolverRole,
+      dto,
+    );
+
+    // Emit event after transaction commit for SSE consumers
+    this.eventEmitter.emit('case_resolved', {
+      type: 'case_resolved',
+      caseId: resolvedCase.id,
+      workspaceId,
+    });
+
+    return resolvedCase;
   }
 }

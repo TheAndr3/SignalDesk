@@ -6,12 +6,12 @@
 
 **Status:** ready-for-agent
 
-- [ ] `EventsModule` with an SSE controller
-- [ ] `GET /events/stream` endpoint returns `Content-Type: text/event-stream`
-- [ ] Endpoint requires authentication (global `AuthGuard` applies) — workspace is derived from JWT claims
-- [ ] Controller subscribes to `EventEmitter2` events (`case_created`, `case_claimed`, `case_resolved`) and filters by `workspaceId` matching the connected client's workspace
-- [ ] Each SSE message has the shape: `data: { "type": "case_created" | "case_claimed" | "case_resolved", "caseId": "<uuid>" }`
-- [ ] Clients in Workspace A never receive events for Workspace B mutations
-- [ ] Multiple concurrent SSE connections for the same workspace each receive the event
-- [ ] Connection cleanup: when the client disconnects, the event listener is removed (no memory leak)
-- [ ] Verified by: opening the SSE stream in a terminal/browser, performing a mutation in another, and observing the event arrive
+- [x] `EventsModule` with an SSE controller
+- [x] `GET /events/stream` endpoint returns `Content-Type: text/event-stream`
+- [x] Endpoint requires authentication (global `AuthGuard` applies) — workspace is derived from JWT claims
+- [x] Controller subscribes to `EventEmitter2` events (`case_created`, `case_claimed`, `case_resolved`) and filters by `workspaceId` matching the connected client's workspace
+- [x] Each SSE message has the shape: `data: { "type": "case_created" | "case_claimed" | "case_resolved", "caseId": "<uuid>" }`
+- [x] Clients in Workspace A never receive events for Workspace B mutations
+- [x] Multiple concurrent SSE connections for the same workspace each receive the event
+- [x] Connection cleanup: when the client disconnects, the event listener is removed (no memory leak)
+- [x] Verified by: opening the SSE stream in a terminal/browser, performing a mutation in another, and observing the event arrive
